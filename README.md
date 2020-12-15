@@ -7,7 +7,7 @@ Clone or download this repository (path of the folder is the <roam-with-helm> us
 
 In your ~/.emacs, add the following two lines:
 
-    (add-to-list 'load-path "<roam-with-helm>") ; add color-rg to your load-path
+    (add-to-list 'load-path "<roam-with-helm>") 
     (require 'roam-with-helm)
 
 
