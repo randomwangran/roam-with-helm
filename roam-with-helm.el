@@ -3,27 +3,9 @@
 (cl-defun org-roam-completion--completing-read (prompt choices &key
                                                        require-match initial-input
                                                        action)
-  "Present a PROMPT with CHOICES and optional INITIAL-INPUT.
-If REQUIRE-MATCH is t, the user must select one of the CHOICES.
-Return user choice."
   (let (res)
     (setq res
           (cond
-           ((eq org-roam-completion-system 'ido)
-            (let ((candidates (mapcar #'car choices)))
-              (ido-completing-read prompt candidates nil require-match initial-input)))
-           ((eq org-roam-completion-system 'default)
-            (completing-read prompt choices nil require-match initial-input))
-           ((eq org-roam-completion-system 'ivy)
-            (if (fboundp 'ivy-read)
-                (ivy-read prompt choices
-                          :initial-input initial-input
-                          :require-match require-match
-                          :action (prog1 action
-                                    (setq action nil))
-                          :caller 'org-roam--completing-read)
-              (user-error "Please install ivy from \
-https://github.com/abo-abo/swiper")))
            ((eq org-roam-completion-system 'helm)
             (unless (and (fboundp 'helm)
                          (fboundp 'helm-make-source))
@@ -35,7 +17,7 @@ https://github.com/emacs-helm/helm"))
                                       (let ((note (helm-marked-candidates :with-wildcard t)))
                                         (if (> (length note) 1)
                                             (cl-loop for n in note
-                                                     do (wr/get-path-from-title n))
+                                                     do (roam-with-helm--get-path-from-title n))
                                           (org-roam-find-file _candidate nil nil t)
                                           )
                                         ))
@@ -54,11 +36,13 @@ https://github.com/emacs-helm/helm"))
         (funcall action res)
       res)))
 
-(defun wr/get-path-from-title (title)
+(defun roam-with-helm--get-path-from-title (title)
   (cl-loop for ns in (mapcar #'cdr (org-roam--get-title-path-completions))
            do (pcase ns
                 (`(:path ,foo :title ,bar) (if (string-match title bar)
-                                               (insert (format "#+transclude: t\n[[file:%s][%s]]\n\n" (wr/return-path-relative-to-home foo) bar)))))))
+                                               (insert (format "#+transclude: t\n[[file:%s][%s]]\n\n" (roam-with-helm--return-path-relative-to-home foo) bar)))))))
 
-(defun wr/return-path-relative-to-home (full-path)
+(defun roam-with-helm--return-path-relative-to-home (full-path)
   (concat "~/"(string-remove-prefix (file-truename "~/") full-path)))
+
+(provide 'roam-with-helm)
