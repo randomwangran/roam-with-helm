@@ -1,19 +1,39 @@
-(setq org-roam-completion-system 'helm)
+(setq roam-with-helm-org-roam-completion-system 'helm+)
 
-(cl-defun org-roam-completion--completing-read (prompt choices &key
+(defun roam-with-helm-org-roam-find-file (&optional initial-prompt completions filter-fn no-confirm)
+  (interactive)
+  (unless org-roam-mode (org-roam-mode))
+  (let* ((completions (funcall (or filter-fn #'identity)
+                               (or completions (org-roam--get-title-path-completions))))
+         (title-with-tags (if no-confirm
+                              initial-prompt
+                            (+org-roam-completion--completing-read "File: " completions
+                                                                  :initial-input initial-prompt)))
+         (res (cdr (assoc title-with-tags completions)))
+         (file-path (plist-get res :path)))
+    (if file-path
+        (org-roam--find-file file-path)
+      (let ((org-roam-capture--info `((title . ,title-with-tags)
+                                      (slug  . ,(funcall org-roam-title-to-slug-function title-with-tags))))
+            (org-roam-capture--context 'title))
+        (setq org-roam-capture-additional-template-props (list :finalize 'find-file))
+        (org-roam-capture--capture)))))
+
+(cl-defun +org-roam-completion--completing-read (prompt choices &key
                                                        require-match initial-input
                                                        action)
   (let (res)
     (setq res
           (cond
-           ((eq org-roam-completion-system 'helm)
+           ((eq roam-with-helm-org-roam-completion-system 'helm+)
             (unless (and (fboundp 'helm)
                          (fboundp 'helm-make-source))
               (user-error "Please install helm from \
 https://github.com/emacs-helm/helm"))
             (let ((source (helm-make-source prompt 'helm-source-sync
                             :candidates (mapcar #'car choices)
-                            :action (lambda (_candidate)
+                            :action
+                            (lambda (_candidate)
                                       (let ((note (helm-marked-candidates :with-wildcard t)))
                                         (if (> (length note) 1)
                                             (cl-loop for n in note
