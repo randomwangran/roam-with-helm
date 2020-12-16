@@ -29,6 +29,6 @@ content.
 
 ## Insert the contents as a transclusion link.
 
-This requires user to mark the candidates by pressing `SPC`. After
+This requires user to mark the candidates by pressing `C-SPC`. After
 the selection, press `RET` to insert the candidates as
 transclusions.
