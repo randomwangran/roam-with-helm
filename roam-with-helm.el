@@ -38,9 +38,7 @@ https://github.com/emacs-helm/helm"))
                                         (if (> (length note) 1)
                                             (cl-loop for n in note
                                                      do (roam-with-helm--get-path-from-title n))
-                                          (org-roam-find-file _candidate nil nil t)
-                                          )
-                                        ))
+                                          (org-roam-find-file _candidate nil nil t))))
                             :filtered-candidate-transformer
                             (and (not require-match)
                                  #'org-roam-completion--helm-candidate-transformer)))
