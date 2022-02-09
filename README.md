@@ -16,7 +16,10 @@ In your ~/.emacs, add the following two lines:
 By press: \`M-x roam-with-helm-org-roam-find-file\`
 
     (define-key org-mode-map (kbd "C-c f") 'roam-with-helm-org-roam-find-file)
-
+    
+Or for version-2
+    
+    (define-key global-mode-map (kbd "C-c f") 'helm-org-roam)
 
 ## Jump to the content
 
