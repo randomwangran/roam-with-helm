@@ -13,7 +13,9 @@ In your ~/.emacs, add the following two lines:
 
 # Usage
 
-Use `org-roam-find-file` as usual.
+By press: \`M-x roam-with-helm-org-roam-find-file\`
+
+    (define-key org-mode-map (kbd "C-c f") 'roam-with-helm-org-roam-find-file)
 
 
 ## Jump to the content
@@ -38,3 +40,6 @@ transclusions.
 
 It cannot insert a normal link as `org-roam-insert-immediate` on the
 fly depending on existence of notes.
+
+So, this function is tweaked as a separated function. You can use
+your favorite completing system as you used to.
