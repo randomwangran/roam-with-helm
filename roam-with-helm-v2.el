@@ -8,6 +8,7 @@ I add a function to insert multiply notes. Then, those notes are
 hard-coded to be transcluded into the current buffer.
 "
   (interactive)
+  (require 'helm-mode)
   (require 'org-roam)
   (helm
    :input input
@@ -20,7 +21,7 @@ hard-coded to be transcluded into the current buffer.
                '(("Find File" . (lambda (x)
                                   (--> x
                                        org-roam-node-from-title-or-alias
-                                       (org-roam-node-visit it t))))
+                                       (org-roam-node-visit it nil))))
                  ("Insert link" . (lambda (x)
                                     (--> x
                                          org-roam-node-from-title-or-alias
