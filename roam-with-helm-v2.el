@@ -27,12 +27,22 @@ FROM
     GROUP BY nodes.id, tags.tag, aliases.alias )
   GROUP BY id, tags )
 GROUP BY id")
-        collect (cons (if (nth 2 cand)
-                          (format "%s   #%s"
-                               (nth 1 cand) ;; id 0, title 1, tag 3
-                               (mapconcat 'identity (nth 2 cand) "#"))
-                        (format "%s"
-                               (nth 1 cand)))
+        collect (cons (if (nth 3 cand)
+                          (if (nth 2 cand)
+                              (format "%s   @%s  #%s"
+                                      (nth 1 cand)
+                                      (mapconcat 'identity (nth 3 cand) "@")
+                                      (mapconcat 'identity (nth 2 cand) "#"))
+                            (format "%s   @%s"
+                                    (nth 1 cand)
+                                    (mapconcat 'identity (nth 3 cand) "@")))
+                        (if (nth 2 cand)
+                            (format "%s   #%s"
+                                    (nth 1 cand)
+                                    (mapconcat 'identity (nth 2 cand) "#"))
+                          (format "%s"
+                                  (nth 1 cand)
+                                  (mapconcat 'identity (nth 3 cand) "@"))))
                       cand)))
 
 (defun helm-org-roam (&optional input candidates)
