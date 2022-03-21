@@ -1,9 +1,3 @@
-;;;;
-;;  (defun candidate-contain-alias (s1 s2)
-;;    (if (string-match-p "@" (car s2))
-;;        nil
-;;      t))
-
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
   (loop for cand in (org-roam-db-query
@@ -31,7 +25,29 @@ FROM
     LEFT JOIN aliases ON aliases.node_id = nodes.id
     GROUP BY nodes.id, tags.tag, aliases.alias )
   GROUP BY id, tags )
-GROUP BY id")
+GROUP BY id
+UNION ALL
+SELECT
+  id,
+  aliases,
+  Null as Col2,
+  Null as Col3
+FROM
+  (
+  SELECT
+    id,
+    '(' || group_concat(aliases, ' ') || ')' as aliases
+  FROM
+    (
+    SELECT
+      nodes.id as id,
+      aliases.alias as aliases
+    FROM nodes
+    LEFT JOIN aliases ON aliases.node_id = nodes.id
+    GROUP BY nodes.id, aliases.alias )
+  GROUP BY id )
+GROUP BY id
+")
         collect (cons (if (nth 3 cand)
                           (if (nth 2 cand)
                               (format "%s    @%s   #%s"
@@ -75,12 +91,12 @@ hard-coded to be transcluded into the current buffer.
                :action
                '(("Find File" . (lambda (canadidate)
                                   (org-roam-node-visit
-                                   (org-roam-node-from-title-or-alias
-                                    (nth 1 canadidate))
+                                   (org-roam-node-from-id
+                                    (nth 0 canadidate))
                                    nil)))
 
                  ("Insert link" . (lambda (canadidate)
-                                    (let ((note-id (org-roam-node-from-title-or-alias (nth 1 canadidate))))
+                                    (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
                                       (insert
                                        (format
                                         "[[id:%s][%s]]"
@@ -91,7 +107,7 @@ hard-coded to be transcluded into the current buffer.
                                                         (let ((note (helm-marked-candidates)))
                                                           (cl-loop for n in note
                                                                    do (--> n
-                                                                           (let ((note-id (org-roam-node-from-title-or-alias (nth 1 n))))
+                                                                           (let ((note-id (org-roam-node-from-id (nth 0 n))))
                                                                              (insert
                                                                               (format
                                                                                "#+transclude: [[id:%s][%s]] :only-contents\n\n"
