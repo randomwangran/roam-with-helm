@@ -1,4 +1,9 @@
 ;;;;
+;;  (defun candidate-contain-alias (s1 s2)
+;;    (if (string-match-p "@" (car s2))
+;;        nil
+;;      t))
+
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
   (loop for cand in (org-roam-db-query
@@ -29,7 +34,7 @@ FROM
 GROUP BY id")
         collect (cons (if (nth 3 cand)
                           (if (nth 2 cand)
-                              (format "%s   @%s  #%s"
+                              (format "%s    @%s   #%s"
                                       (nth 1 cand)
                                       (mapconcat 'identity (nth 3 cand) "@")
                                       (mapconcat 'identity (nth 2 cand) "#"))
@@ -64,12 +69,16 @@ hard-coded to be transcluded into the current buffer.
                :must-match nil
                :fuzzy-match t
                :candidates #'node-candidates
+
+                                        ;:filtered-candidate-transformer (-sort my-h-sort-fn candidates)
+                                        ; maybe filter at building candidates?
                :action
                '(("Find File" . (lambda (canadidate)
                                   (org-roam-node-visit
                                    (org-roam-node-from-title-or-alias
                                     (nth 1 canadidate))
                                    nil)))
+
                  ("Insert link" . (lambda (canadidate)
                                     (let ((note-id (org-roam-node-from-title-or-alias (nth 1 canadidate))))
                                       (insert
