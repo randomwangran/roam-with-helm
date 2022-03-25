@@ -36,7 +36,7 @@ FROM
   (
   SELECT
     id,
-    '(' || group_concat(aliases, ' ') || ')' as aliases
+    aliases as aliases
   FROM
     (
     SELECT
@@ -83,7 +83,7 @@ hard-coded to be transcluded into the current buffer.
    :sources (list
              (helm-build-sync-source "Roam: "
                :must-match nil
-               :fuzzy-match t
+               :fuzzy-match nil
                :candidates #'node-candidates
 
                                         ;:filtered-candidate-transformer (-sort my-h-sort-fn candidates)
