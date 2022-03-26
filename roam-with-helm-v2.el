@@ -1,37 +1,33 @@
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
   (loop for cand in (org-roam-db-query
-               "SELECT
+                 "SELECT
   id,
   title,
-  '(' || group_concat(tags, ' ') || ')' as tags,
-  aliases
+  '(' || group_concat(tags, ' ') || ')' as tags
 FROM
   (
   SELECT
     id,
     title,
-    tags,
-    '(' || group_concat(aliases, ' ') || ')' as aliases
+    tags
   FROM
     (
     SELECT
       nodes.id as id,
       nodes.title as title,
-      tags.tag as tags,
-      aliases.alias as aliases
+      tags.tag as tags
     FROM nodes
     LEFT JOIN tags ON tags.node_id = nodes.id
     LEFT JOIN aliases ON aliases.node_id = nodes.id
-    GROUP BY nodes.id, tags.tag, aliases.alias )
+    GROUP BY nodes.id, tags.tag )
   GROUP BY id, tags )
 GROUP BY id
 UNION ALL
 SELECT
   id,
   aliases,
-  Null as Col2,
-  Null as Col3
+  Null as Col2
 FROM
   (
   SELECT
@@ -48,22 +44,12 @@ FROM
   GROUP BY id )
 GROUP BY id
 ")
-        collect (cons (if (nth 3 cand)
-                          (if (nth 2 cand)
-                              (format "%s    @%s   #%s"
-                                      (nth 1 cand)
-                                      (mapconcat 'identity (nth 3 cand) "@")
-                                      (mapconcat 'identity (nth 2 cand) "#"))
-                            (format "%s   @%s"
-                                    (nth 1 cand)
-                                    (mapconcat 'identity (nth 3 cand) "@")))
-                        (if (nth 2 cand)
+        collect (cons (if (nth 2 cand)
                             (format "%s   #%s"
                                     (nth 1 cand)
                                     (mapconcat 'identity (nth 2 cand) "#"))
                           (format "%s"
-                                  (nth 1 cand)
-                                  (mapconcat 'identity (nth 3 cand) "@"))))
+                                  (nth 1 cand)))
                       cand)))
 
 (defun helm-org-roam (&optional input candidates)
