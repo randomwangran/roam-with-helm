@@ -127,45 +127,57 @@ very fast.
 
 The drawback is it lacks some features. For example, tags and
 formatting stuff. When I saw you have 5 seconds issue, I thought that you
-might have similar issues. "
+might have similar issues."
   (interactive)
-  (helm
-   :input input
-   :sources (list
-             (helm-build-sync-source "Roam: "
-               :must-match nil
-               :fuzzy-match nil
-               :candidates #'node-candidates
-               :action
-               '(("Find File" . (lambda (canadidate)
-                                  (org-roam-node-visit
-                                   (org-roam-node-from-id
-                                    (nth 0 canadidate))
-                                   nil)))
+  (let ((default (if (use-region-p)
+                     (buffer-substring-no-properties
+                      (region-beginning) (region-end))
+                   (thing-at-point 'symbol))))
+    (helm
+     :input default
+     :sources (list
+               (helm-build-sync-source "Roam: "
+                 :must-match nil
+                 :fuzzy-match nil
+                 :candidates #'node-candidates
+                 :action
+                 '(("Find File" . (lambda (canadidate)
+                                    (org-roam-node-visit
+                                     (org-roam-node-from-id
+                                      (nth 0 canadidate))
+                                     nil)))
 
-                 ("Insert link" . (lambda (canadidate)
-                                    (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
-                                      (insert
-                                       (format
-                                        "[[id:%s][%s]]"
-                                        (org-roam-node-id note-id)
-                                        (org-roam-node-title note-id))))))
+                   ("Insert link" . (lambda (canadidate)
+                                      (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                        (if default
+                                            (progn
+                                              (delete-region (region-beginning) (region-end))
+                                              (insert
+                                               (format
+                                                "[[id:%s][%s]]"
+                                                (org-roam-node-id note-id)
+                                                default)))
+                                          (insert
+                                           (format
+                                            "[[id:%s][%s]]"
+                                            (org-roam-node-id note-id)
+                                            (org-roam-node-title note-id)))))))
 
-                 ("Insert links with transclusions" . (lambda (x)
-                                                        (let ((note (helm-marked-candidates)))
-                                                          (cl-loop for n in note
-                                                                   do (--> n
-                                                                           (let ((note-id (org-roam-node-from-id (nth 0 n))))
-                                                                             (insert
-                                                                              (format
-                                                                               "#+transclude: [[id:%s][%s]] :only-contents\n\n"
-                                                                               (org-roam-node-id note-id)
-                                                                               (org-roam-node-title note-id)))))))))))
-             (helm-build-dummy-source
-                 "Create note"
-               :action '(("Capture note" . (lambda (candidate)
-                                             (org-roam-capture-
-                                              :node (org-roam-node-create :title candidate)
-                                              :props '(:finalize find-file)))))))))
+                   ("Insert links with transclusions" . (lambda (x)
+                                                          (let ((note (helm-marked-candidates)))
+                                                            (cl-loop for n in note
+                                                                     do (--> n
+                                                                             (let ((note-id (org-roam-node-from-id (nth 0 n))))
+                                                                               (insert
+                                                                                (format
+                                                                                 "#+transclude: [[id:%s][%s]] :only-contents\n\n"
+                                                                                 (org-roam-node-id note-id)
+                                                                                 (org-roam-node-title note-id)))))))))))
+               (helm-build-dummy-source
+                   "Create note"
+                 :action '(("Capture note" . (lambda (candidate)
+                                               (org-roam-capture-
+                                                :node (org-roam-node-create :title candidate)
+                                                :props '(:finalize find-file))))))))))
 
 (provide 'roam-with-helm-v2)
