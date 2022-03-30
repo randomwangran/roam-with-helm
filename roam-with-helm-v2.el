@@ -45,6 +45,12 @@
 (require 'helm-mode)
 (require 'org-roam)
 
+(defun fast/org-roam-node-random ()
+  "Jump into a random node but very fast."
+  (interactive)
+  (org-roam-node-visit (org-roam-node-from-id
+                        (seq-random-elt
+                         (mapcar 'car (mapcar 'cdr (node-candidates))))) nil))
 
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
