@@ -135,10 +135,9 @@ The drawback is it lacks some features. For example, tags and
 formatting stuff. When I saw you have 5 seconds issue, I thought that you
 might have similar issues."
   (interactive)
-  (let ((default (if (use-region-p)
+  (let ((default (when (use-region-p)
                      (buffer-substring-no-properties
-                      (region-beginning) (region-end))
-                   (thing-at-point 'symbol))))
+                      (region-beginning) (region-end)))))
     (helm
      :input default
      :sources (list
