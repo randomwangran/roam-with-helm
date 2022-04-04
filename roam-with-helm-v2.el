@@ -103,7 +103,7 @@ GROUP BY id
                                     (truncate-string-to-width (nth 1 cand) 80 nil ?\s "…")
                                     (mapconcat 'identity (nth 2 cand) " #"))
                           (format "%s"
-                                  (nth 1 cand)))
+                                  (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
                       cand)))
 
 (defun helm-org-roam (&optional input candidates)
