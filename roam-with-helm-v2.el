@@ -183,6 +183,17 @@ might have similar issues."
                  :action '(("Capture note" . (lambda (candidate)
                                                (org-roam-capture-
                                                 :node (org-roam-node-create :title candidate)
-                                                :props '(:finalize find-file))))))))))
+                                                :props '(:finalize find-file))))))
+
+               (helm-build-dummy-source
+                   "Search on Net"
+                 :action '(("Open" . (lambda (candidate)
+                                       (browse-url (concat "https://encrypted.google.com/search?ie=UTF-8&oe=UTF-8&q=" candidate))))))
+
+               (helm-build-dummy-source
+                   "Search on G-scholar"
+                 :action '(("Open" . (lambda (candidate)
+                                       (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))))))
+
 
 (provide 'roam-with-helm-v2)
