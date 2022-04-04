@@ -100,8 +100,8 @@ GROUP BY id
 ")
         collect (cons (if (nth 2 cand)
                             (format "%s   #%s"
-                                    (nth 1 cand)
-                                    (mapconcat 'identity (nth 2 cand) "#"))
+                                    (truncate-string-to-width (nth 1 cand) 80 nil ?\s "…")
+                                    (mapconcat 'identity (nth 2 cand) " #"))
                           (format "%s"
                                   (nth 1 cand)))
                       cand)))
