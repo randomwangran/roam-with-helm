@@ -57,6 +57,26 @@
   (loop for cand in (org-roam-db-query
                  "SELECT
   id,
+  aliases,
+  Null as Col2
+FROM
+  (
+  SELECT
+    id,
+    aliases as aliases
+  FROM
+    (
+    SELECT
+      nodes.id as id,
+      aliases.alias as aliases
+    FROM nodes
+    LEFT JOIN aliases ON aliases.node_id = nodes.id
+    GROUP BY nodes.id, aliases.alias )
+  GROUP BY id )
+GROUP BY id
+UNION ALL
+SELECT
+  id,
   title,
   '(' || group_concat(tags, ' ') || ')' as tags
 FROM
@@ -76,26 +96,6 @@ FROM
     LEFT JOIN aliases ON aliases.node_id = nodes.id
     GROUP BY nodes.id, tags.tag )
   GROUP BY id, tags )
-GROUP BY id
-UNION ALL
-SELECT
-  id,
-  aliases,
-  Null as Col2
-FROM
-  (
-  SELECT
-    id,
-    aliases as aliases
-  FROM
-    (
-    SELECT
-      nodes.id as id,
-      aliases.alias as aliases
-    FROM nodes
-    LEFT JOIN aliases ON aliases.node_id = nodes.id
-    GROUP BY nodes.id, aliases.alias )
-  GROUP BY id )
 GROUP BY id
 ")
         collect (cons (if (nth 2 cand)
