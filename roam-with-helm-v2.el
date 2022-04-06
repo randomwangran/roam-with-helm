@@ -106,7 +106,7 @@ GROUP BY id
                                   (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
                       cand)))
 
-(defun helm-org-roam (&optional input candidates)
+(defun helm-org-roam (&optional default candidates)
   "Original see from a blog post by Andrea:
 <https://ag91.github.io/blog/2022/02/05/an-helm-source-for-org-roam-v2/>
 
@@ -130,10 +130,7 @@ very fast.
 
 ;; → run time: 5.713161 seconds
 ;; → run time: 0.130336 seconds
-
-The drawback is it lacks some features. For example, tags and
-formatting stuff. When I saw you have 5 seconds issue, I thought that you
-might have similar issues."
+"
   (interactive)
   (let ((default (when (use-region-p)
                      (buffer-substring-no-properties
