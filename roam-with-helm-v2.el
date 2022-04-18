@@ -1,4 +1,4 @@
-;;; roam-with-helm --- A source for navigation Org-roam  -*- lexical-binding: t; -*-
+;;; roam-with-helm --- A source for navigation Org-roam  -*- lexical-binding: nil; -*-
 
 ;; Copyright (C) 2022 Ran Wang
 
@@ -133,8 +133,8 @@ very fast.
 "
   (interactive)
   (let ((default (when (use-region-p)
-                     (buffer-substring-no-properties
-                      (region-beginning) (region-end)))))
+                   (buffer-substring-no-properties
+                    (region-beginning) (region-end)))))
     (helm
      :input default
      :sources (list
