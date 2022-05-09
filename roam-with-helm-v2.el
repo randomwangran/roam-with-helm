@@ -149,6 +149,15 @@ very fast.
                                       (nth 0 canadidate))
                                      nil)))
 
+                   ("Add alias" . (lambda (canadidate)
+                                    (let ((node (org-roam-node-from-id
+                                                 (nth 0 canadidate))))
+                                      (org-roam-node-visit node nil)
+                                      (save-excursion
+                                        (goto-char (org-roam-node-point node))
+                                        (let ((x))
+                                          (org-roam-property-add "ROAM_ALIASES" (read-from-minibuffer "What ALIAS?")))))))
+
                    ("Insert link" . (lambda (canadidate)
                                       (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
                                         (if default
