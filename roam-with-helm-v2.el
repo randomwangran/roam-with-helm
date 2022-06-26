@@ -183,6 +183,16 @@ very fast.
                                                                                 (format
                                                                                  "#+transclude: [[id:%s][%s]] :only-contents\n\n"
                                                                                  (org-roam-node-id note-id)
+                                                                                 (org-roam-node-title note-id)))))))))
+                   ("Insert as transclusion exclude headline" . (lambda (x)
+                                                          (let ((note (helm-marked-candidates)))
+                                                            (cl-loop for n in note
+                                                                     do (--> n
+                                                                             (let ((note-id (org-roam-node-from-id (nth 0 n))))
+                                                                               (insert
+                                                                                (format
+                                                                                 "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
+                                                                                 (org-roam-node-id note-id)
                                                                                  (org-roam-node-title note-id)))))))))))
                (helm-build-dummy-source
                    "Create note"
