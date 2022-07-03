@@ -4,7 +4,7 @@
 
 ;; Author: Ran Wang
 ;; URL: https://github.com/randomwangran/roam-with-helm
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Package-Requires: ((emacs "27.1") (org "9.4") (helm "3.6.2") (org-roam "2.2.1"))
 ;; Keywords: org-mode, navigation, writing, note-taking
 
@@ -44,6 +44,178 @@
 
 (require 'helm-mode)
 (require 'org-roam)
+(require 'helm-org-walk)
+
+
+;;;; [Very Very Very important]
+;; Walk around for dynamically capture a thoughts into a node.
+;; Notice `(dynamic-node ,title-or-id), only works for Helm user.
+;;
+(defun org-roam-capture--setup-target-location ()
+  "Initialize the buffer, and goto the location of the new capture.
+Return the ID of the location."
+  (let (p new-file-p)
+    (pcase (org-roam-capture--get-target)
+      (`(file ,path)
+       (setq path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (when new-file-p (org-roam-capture--put :new-file path))
+       (set-buffer (org-capture-target-buffer path))
+       (widen)
+       (setq p (goto-char (point-min))))
+      (`(file+olp ,path ,olp)
+       (setq path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (when new-file-p (org-roam-capture--put :new-file path))
+       (set-buffer (org-capture-target-buffer path))
+       (setq p (point-min))
+       (let ((m (org-roam-capture-find-or-create-olp olp)))
+         (goto-char m))
+       (widen))
+      (`(file+head ,path ,head)
+       (setq path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (set-buffer (org-capture-target-buffer path))
+       (when new-file-p
+         (org-roam-capture--put :new-file path)
+         (insert (org-roam-capture--fill-template head 'ensure-newline)))
+       (widen)
+       (setq p (goto-char (point-min))))
+      (`(file+head+olp ,path ,head ,olp)
+       (setq path (org-roam-capture--target-truepath path)
+             new-file-p (org-roam-capture--new-file-p path))
+       (set-buffer (org-capture-target-buffer path))
+       (widen)
+       (when new-file-p
+         (org-roam-capture--put :new-file path)
+         (insert (org-roam-capture--fill-template head 'ensure-newline)))
+       (setq p (point-min))
+       (let ((m (org-roam-capture-find-or-create-olp olp)))
+         (goto-char m)))
+      (`(file+datetree ,path ,tree-type)
+       (setq path (org-roam-capture--target-truepath path))
+       (require 'org-datetree)
+       (widen)
+       (set-buffer (org-capture-target-buffer path))
+       (unless (file-exists-p path)
+         (org-roam-capture--put :new-file path))
+       (funcall
+        (pcase tree-type
+          (`week #'org-datetree-find-iso-week-create)
+          (`month #'org-datetree-find-month-create)
+          (_ #'org-datetree-find-date-create))
+        (calendar-gregorian-from-absolute
+         (cond
+          (org-overriding-default-time
+           ;; Use the overriding default time.
+           (time-to-days org-overriding-default-time))
+          ((org-capture-get :default-time)
+           (time-to-days (org-capture-get :default-time)))
+          ((org-capture-get :time-prompt)
+           ;; Prompt for date.  Bind `org-end-time-was-given' so
+           ;; that `org-read-date-analyze' handles the time range
+           ;; case and returns `prompt-time' with the start value.
+           (let* ((org-time-was-given nil)
+                  (org-end-time-was-given nil)
+                  (prompt-time (org-read-date
+                                nil t nil "Date for tree entry:")))
+             (org-capture-put
+              :default-time
+              (if (or org-time-was-given
+                      (= (time-to-days prompt-time) (org-today)))
+                  prompt-time
+                ;; Use 00:00 when no time is given for another
+                ;; date than today?
+                (apply #'encode-time 0 0
+                       org-extend-today-until
+                       (cl-cdddr (decode-time prompt-time)))))
+             (time-to-days prompt-time)))
+          (t
+           ;; Current date, possibly corrected for late night
+           ;; workers.
+           (org-today)))))
+       (setq p (point)))
+      (`(node ,title-or-id)
+       ;; first try to get ID, then try to get title/alias
+       (let ((node (or (org-roam-node-from-id title-or-id)
+                       (org-roam-node-from-title-or-alias title-or-id)
+                       (user-error "No node with title or id \"%s\"" title-or-id))))
+         (set-buffer (org-capture-target-buffer (org-roam-node-file node)))
+         (goto-char (org-roam-node-point node))
+         (setq p (org-roam-node-point node))))
+      (`(dynamic-node ,title-or-id)
+       ;; (nth 0 canadidate) is a hack for helm user.
+       (let ((node (or (org-roam-node-from-id (nth 0 canadidate))
+                       (user-error "No node with title or id \"%s\"" title-or-id))))
+         (set-buffer (org-capture-target-buffer (org-roam-node-file node)))
+         (goto-char (org-roam-node-point node))
+         (setq p (org-roam-node-point node)))))
+    ;; Setup `org-id' for the current capture target and return it back to the
+    ;; caller.
+    (save-excursion
+      (goto-char p)
+      (if-let ((id (org-entry-get p "ID")))
+          (setf (org-roam-node-id org-roam-capture--node) id)
+        (org-entry-put p "ID" (org-roam-node-id org-roam-capture--node)))
+      (prog1
+          (org-id-get)
+        (run-hooks 'org-roam-capture-new-node-hook)))))
+
+;;;;
+(defun helm-org-roam-node-walk--subheadings-at-point ()
+  "Return a list of subheadings."
+  (if (org-before-first-heading-p)
+      (save-excursion
+        (let ((pred (lambda () (if (org-id-get)
+                                   (cons (org-entry-get nil "ITEM")
+                                         (org-id-get))))))
+          (progn
+            (org-show-subtree)
+            (remq nil (cdr (cl-loop collect (funcall pred)
+                          until (let ((pos (point)))
+                                  (null (org-forward-heading-same-level nil t))
+                                  (eq pos (point))))))
+            )))
+    (org-save-outline-visibility t
+      (save-excursion
+        (let ((pred (lambda () (if (org-id-get)
+                                   (cons (org-entry-get nil "ITEM")
+                                         (org-id-get))))))
+          (progn
+            (org-back-to-heading t)
+            (org-show-subtree)
+            (if (org-goto-first-child)
+                (cl-loop collect (funcall pred)
+                         until (let ((pos (point)))
+                                 (null (org-forward-heading-same-level nil t))
+                                 (eq pos (point)))))))))))
+
+(defun helm-org-roam-node-walk (my-id)
+  "Process content of MY-ID. If it is a title, insert the whole
+file. Otherwise, just insert the content of the subtree."
+  (interactive)
+  (if (= (org-roam-node-level (org-roam-node-from-id my-id)) 0)
+      (with-temp-buffer
+        (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
+        (org-mode)
+        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point)))
+    (with-temp-buffer
+        (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
+        (org-mode)
+        (re-search-forward (concat ":ID:       " my-id))
+        (org-narrow-to-subtree)
+        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))
+
+  (helm
+   :sources (list
+             (helm-build-sync-source "We have some children: "
+               :candidates my-new-candidates
+               :action
+               '(("Open" . (lambda (new-candidates)
+                             (org-roam-node-visit
+                                     (org-roam-node-from-id
+                                      new-candidates)
+                                     nil))))))))
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
@@ -54,7 +226,7 @@
 
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
-  (loop for cand in (org-roam-db-query
+  (cl-loop for cand in (org-roam-db-query
                  "SELECT
   id,
   aliases,
@@ -149,6 +321,18 @@ very fast.
                                       (nth 0 canadidate))
                                      nil)))
 
+                   ("Helm-org-roam-node-walk" . (lambda (canadidate)
+                                              (helm-org-roam-node-walk (nth 0 canadidate))))
+
+                   ("Capture as a child" . (lambda (canadidate)
+                                       (org-roam-capture-
+                                        :templates '(("v" "Test before 1st head" entry
+                                                      "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
+                                                      :target (dynamic-node title-or-id)
+                                                      ))
+                                        :node (org-roam-node-from-id (nth 0 canadidate))
+                                        :props '(:immediate-finish nil))))
+
                    ("Add alias" . (lambda (canadidate)
                                     (let ((node (org-roam-node-from-id
                                                  (nth 0 canadidate))))
@@ -184,6 +368,7 @@ very fast.
                                                                                  "#+transclude: [[id:%s][%s]] :only-contents\n\n"
                                                                                  (org-roam-node-id note-id)
                                                                                  (org-roam-node-title note-id)))))))))
+
                    ("Insert as transclusion exclude headline" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
                                                             (cl-loop for n in note
@@ -193,7 +378,15 @@ very fast.
                                                                                 (format
                                                                                  "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
                                                                                  (org-roam-node-id note-id)
-                                                                                 (org-roam-node-title note-id)))))))))))
+                                                                                 (org-roam-node-title note-id)))))))))
+
+                   ;; Thank Dustin Lacewell for inspiration.
+                   ("Helm-org-walk" . (lambda (canadidate)
+                                        (save-excursion (helm-org-walk
+                                         (org-roam-node-file (org-roam-node-from-id
+                                      (nth 0 canadidate)))))))))
+
+
                (helm-build-dummy-source
                    "Create note"
                  :action '(("Capture note" . (lambda (candidate)
@@ -209,7 +402,9 @@ very fast.
                (helm-build-dummy-source
                    "Search on G-scholar"
                  :action '(("Open" . (lambda (candidate)
-                                       (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))))))
+                                       (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))
 
+               (helm-build-dummy-source "test"
+                 :action '(("Google" . helm/test-default-action)))))))
 
 (provide 'roam-with-helm-v2)
