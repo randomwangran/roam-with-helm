@@ -178,19 +178,16 @@ Return the ID of the location."
                                   (null (org-forward-heading-same-level nil t))
                                   (eq pos (point))))))
             )))
-    (org-save-outline-visibility t
-      (save-excursion
+    (save-excursion
         (let ((pred (lambda () (if (org-id-get)
                                    (cons (org-entry-get nil "ITEM")
                                          (org-id-get))))))
           (progn
-            (org-back-to-heading t)
             (org-show-subtree)
-            (if (org-goto-first-child)
-                (cl-loop collect (funcall pred)
-                         until (let ((pos (point)))
-                                 (null (org-forward-heading-same-level nil t))
-                                 (eq pos (point)))))))))))
+            (remq nil (cdr (cl-loop collect (funcall pred)
+                          until (let ((pos (point)))
+                                  (null (org-next-visible-heading 1))
+                                  (eq pos (point)))))))))))
 
 (defun helm-org-roam-node-walk (my-id)
   "Process content of MY-ID. If it is a title, insert the whole
