@@ -326,8 +326,6 @@ very fast.
                                       (nth 0 canadidate))
                                      nil)))
 
-
-
                    ("Capture as a child" . (lambda (canadidate)
                                        (org-roam-capture-
                                         :templates '(("v" "Test before 1st head" entry
@@ -430,13 +428,12 @@ very fast.
                            '(("Helm-org-roam-node-walk" . (lambda (canadidate)
                                                             (setq previous-node-title (nth 1 canadidate))
                                                             (helm-org-roam-node-walk (nth 0 canadidate))))
+
                              ("Find File" . (lambda (canadidate)
                                               (org-roam-node-visit
                                                (org-roam-node-from-id
                                                 (nth 0 canadidate))
                                                nil)))
-
-
 
                              ("Capture as a child" . (lambda (canadidate)
                                                        (org-roam-capture-
@@ -521,6 +518,13 @@ very fast.
                          (helm-build-dummy-source "test"
                            :action '(("Google" . helm/test-default-action))))))))
 
+
+(defun call-find-file ()
+  "Thanks to xuchunyang:
+<https://emacs.stackexchange.com/a/57734>"
+  (interactive)
+  (helm-select-nth-action 1))
+
 ;;;; kbd
 (setq helm-org-node-walk-map
   (let ((map (make-sparse-keymap)))
@@ -528,10 +532,12 @@ very fast.
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
     map))
 
+
+
 (setq roam-with-helm-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-map)
-    (define-key map (kbd "C-<RET>") 'helm-maybe-exit-minibuffer)
+    (define-key map (kbd "C-<return>") 'call-find-file)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
     (define-key map (kbd "<RET>") 'helm-maybe-exit-minibuffer)
     map))
