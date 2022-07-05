@@ -151,7 +151,16 @@ Return the ID of the location."
                        (user-error "No node with title or id \"%s\"" title-or-id))))
          (set-buffer (org-capture-target-buffer (org-roam-node-file node)))
          (goto-char (org-roam-node-point node))
-         (setq p (org-roam-node-point node)))))
+         (setq p (org-roam-node-point node))))
+
+      (`(dynamic-node-2nd ,title-or-id)
+       ;; (nth 0 canadidate) is a hack for helm user.
+       (let ((node (or (org-roam-node-from-id new-candidates)
+                       (user-error "No node with title or id \"%s\"" title-or-id))))
+         (set-buffer (org-capture-target-buffer (org-roam-node-file node)))
+         (goto-char (org-roam-node-point node))
+         (setq p (org-roam-node-point node))))
+      )
     ;; Setup `org-id' for the current capture target and return it back to the
     ;; caller.
     (save-excursion
@@ -209,7 +218,7 @@ file. Otherwise, just insert the content of the subtree."
   (if (nth 0 (nth 0 my-new-candidates))
       (helm
        :sources (list
-                 (helm-build-sync-source "We have some children: "
+                 (helm-build-sync-source "We have some children?: "
                    :candidates my-new-candidates
                    :keymap helm-org-node-walk-map
                    :action
@@ -217,7 +226,19 @@ file. Otherwise, just insert the content of the subtree."
                                  (org-roam-node-visit
                                   (org-roam-node-from-id
                                    new-candidates)
-                                  nil)))))))
+                                  nil)))
+
+                     ("Capture as a child" . (lambda (new-candidates)
+                                               ;; (message "wr %s" new-candidates)
+                                               (org-roam-capture-
+                                                :templates '(("v" "Test before 1st head" entry
+                                                              "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
+                                                              :target (dynamic-node-2nd title-or-id)
+                                                              ))
+                                                :node (org-roam-node-from-id new-candidates)
+                                                :props '(:immediate-finish nil))
+
+                                       ))))))
     (org-roam-node-visit (org-roam-node-from-id my-id))))
 
 (defun fast/org-roam-node-random ()
@@ -330,13 +351,13 @@ very fast.
                                      nil)))
 
                    ("Capture as a child" . (lambda (canadidate)
-                                       (org-roam-capture-
-                                        :templates '(("v" "Test before 1st head" entry
-                                                      "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
-                                                      :target (dynamic-node title-or-id)
-                                                      ))
-                                        :node (org-roam-node-from-id (nth 0 canadidate))
-                                        :props '(:immediate-finish nil))))
+                                             (org-roam-capture-
+                                              :templates '(("v" "Test before 1st head" entry
+                                                            "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
+                                                            :target (dynamic-node title-or-id)
+                                                            ))
+                                              :node (org-roam-node-from-id (nth 0 canadidate))
+                                              :props '(:immediate-finish nil))))
 
                    ("Add alias" . (lambda (canadidate)
                                     (let ((node (org-roam-node-from-id
