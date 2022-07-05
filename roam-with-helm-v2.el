@@ -204,18 +204,21 @@ file. Otherwise, just insert the content of the subtree."
         (re-search-forward (concat ":ID:       " my-id))
         (org-narrow-to-subtree)
         (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))
-
-  (helm
-   :sources (list
-             (helm-build-sync-source "We have some children: "
-               :candidates my-new-candidates
-               :keymap helm-org-node-walk-map
-               :action
-               '(("Open" . (lambda (new-candidates)
-                             (org-roam-node-visit
-                                     (org-roam-node-from-id
-                                      new-candidates)
-                                     nil))))))))
+  ;; if a node does not have any child, then jump into the node;
+  ;; otherwise, show the children.
+  (if (nth 0 (nth 0 my-new-candidates))
+      (helm
+       :sources (list
+                 (helm-build-sync-source "We have some children: "
+                   :candidates my-new-candidates
+                   :keymap helm-org-node-walk-map
+                   :action
+                   '(("Open" . (lambda (new-candidates)
+                                 (org-roam-node-visit
+                                  (org-roam-node-from-id
+                                   new-candidates)
+                                  nil)))))))
+    (org-roam-node-visit (org-roam-node-from-id my-id))))
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
@@ -278,7 +281,7 @@ GROUP BY id
                                   (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
                       cand)))
 
-(defun helm-org-roam (&optional default candidates)
+(defun helm-org-roam (&optional default ini candidates)
   "Original see from a blog post by Andrea:
 <https://ag91.github.io/blog/2022/02/05/an-helm-source-for-org-roam-v2/>
 
@@ -308,7 +311,7 @@ very fast.
                    (buffer-substring-no-properties
                     (region-beginning) (region-end)))))
     (helm
-     :input default
+     :input (or default ini)
      :sources (list
                (helm-build-sync-source "Roam: "
                  :must-match nil
@@ -317,7 +320,7 @@ very fast.
                  :candidates #'node-candidates
                  :action
                  '(("Helm-org-roam-node-walk" . (lambda (canadidate)
-                                                  (setq previous-node-title (nth 1 canadidate))
+                                                  (setq previous-node-title helm-pattern)
                                               (helm-org-roam-node-walk (nth 0 canadidate))))
 
                    ("Find File" . (lambda (canadidate)
@@ -404,10 +407,7 @@ very fast.
                (helm-build-dummy-source
                    "Search on G-scholar"
                  :action '(("Open" . (lambda (candidate)
-                                       (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))
-
-               (helm-build-dummy-source "test"
-                 :action '(("Google" . helm/test-default-action)))))))
+                                       (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))))))
 
 
 ;;;; poor man's recursion
@@ -426,7 +426,7 @@ very fast.
                            :keymap roam-with-helm-map
                            :action
                            '(("Helm-org-roam-node-walk" . (lambda (canadidate)
-                                                            (setq previous-node-title (nth 1 canadidate))
+                                                            (setq previous-node-title helm-pattern)
                                                             (helm-org-roam-node-walk (nth 0 canadidate))))
 
                              ("Find File" . (lambda (canadidate)
@@ -515,8 +515,7 @@ very fast.
                            :action '(("Open" . (lambda (candidate)
                                                  (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))
 
-                         (helm-build-dummy-source "test"
-                           :action '(("Google" . helm/test-default-action))))))))
+                         )))))
 
 
 (defun call-find-file ()
@@ -531,8 +530,6 @@ very fast.
     (set-keymap-parent map helm-map)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
     map))
-
-
 
 (setq roam-with-helm-map
   (let ((map (make-sparse-keymap)))
