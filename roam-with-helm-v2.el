@@ -238,7 +238,45 @@ file. Otherwise, just insert the content of the subtree."
                                                 :node (org-roam-node-from-id new-candidates)
                                                 :props '(:immediate-finish nil))
 
-                                       ))))))
+                                       ))
+
+                     ("Insert link" . (lambda (canadidate)
+                                      (let ((note-id (org-roam-node-from-id canadidate)))
+                                        (if default
+                                            (progn
+                                              (delete-region (region-beginning) (region-end))
+                                              (insert
+                                               (format
+                                                "[[id:%s][%s]]"
+                                                (org-roam-node-id note-id)
+                                                default)))
+                                          (insert
+                                           (format
+                                            "[[id:%s][%s]]"
+                                            (org-roam-node-id note-id)
+                                            (org-roam-node-title note-id)))))))
+
+                     ("Insert links with transclusions" . (lambda (x)
+                                                            (let ((note (helm-marked-candidates)))
+                                                              (cl-loop for n in note
+                                                                       do (--> n
+                                                                               (let ((note-id (org-roam-node-from-id n)))
+                                                                                 (insert
+                                                                                  (format
+                                                                                   "#+transclude: [[id:%s][%s]] :only-contents\n\n"
+                                                                                   (org-roam-node-id note-id)
+                                                                                   (org-roam-node-title note-id)))))))))
+
+                     ("Insert as transclusion exclude headline" . (lambda (x)
+                                                                    (let ((note (helm-marked-candidates)))
+                                                                      (cl-loop for n in note
+                                                                               do (--> n
+                                                                                       (let ((note-id (org-roam-node-from-id n)))
+                                                                                         (insert
+                                                                                          (format
+                                                                                           "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
+                                                                                           (org-roam-node-id note-id)
+                                                                                           (org-roam-node-title note-id)))))))))))))
     (org-roam-node-visit (org-roam-node-from-id my-id))))
 
 (defun fast/org-roam-node-random ()
@@ -545,11 +583,46 @@ very fast.
   (interactive)
   (helm-select-nth-action 1))
 
+(defun call-add-as-link ()
+  ""
+  (interactive)
+  (helm-select-nth-action 4))
+
+(defun call-add-as-transclusion ()
+  ""
+  (interactive)
+  (helm-select-nth-action 5))
+
+(defun call-add-as-transclusion-only-head ()
+  ""
+  (interactive)
+  (helm-select-nth-action 6))
+
+
+(defun call-add-as-link-in-walking ()
+  ""
+  (interactive)
+  (helm-select-nth-action 2))
+
+(defun call-add-as-transclusion-in-walking ()
+  ""
+  (interactive)
+  (helm-select-nth-action 3))
+
+(defun call-add-as-transclusion-only-head-in-walking ()
+  ""
+  (interactive)
+  (helm-select-nth-action 4))
+
+
 ;;;; kbd
 (setq helm-org-node-walk-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-map)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
+    (define-key map (kbd "C-c i") 'call-add-as-link-in-walking)
+    (define-key map (kbd "C-c M-i") 'call-add-as-transclusion-in-walking)
+    (define-key map (kbd "C-c M-I") 'call-add-as-transclusion-only-head-in-walking)
     map))
 
 (setq roam-with-helm-map
@@ -557,6 +630,9 @@ very fast.
     (set-keymap-parent map helm-map)
     (define-key map (kbd "C-<return>") 'call-find-file)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
+    (define-key map (kbd "C-c i") 'call-add-as-link)
+    (define-key map (kbd "C-c M-i") 'call-add-as-transclusion)
+    (define-key map (kbd "C-c M-I") 'call-add-as-transclusion-only-head)
     (define-key map (kbd "<RET>") 'helm-maybe-exit-minibuffer)
     map))
 
