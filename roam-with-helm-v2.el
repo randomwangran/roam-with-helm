@@ -290,14 +290,9 @@ file. Otherwise, just insert the content of the subtree."
   "Returns candidates for the org-roam nodes."
   (cl-loop for cand in (org-roam-db-query
                  "SELECT
-  id,
-  aliases,
-  Null as Col2
-FROM
-  (
-  SELECT
     id,
-    aliases as aliases
+    aliases as aliases,
+    Null as Col2
   FROM
     (
     SELECT
@@ -305,9 +300,8 @@ FROM
       aliases.alias as aliases
     FROM nodes
     LEFT JOIN aliases ON aliases.node_id = nodes.id
-    GROUP BY nodes.id, aliases.alias )
-  GROUP BY id )
-GROUP BY id
+    GROUP BY nodes.id, aliases.alias
+)
 UNION ALL
 SELECT
   id,
@@ -574,6 +568,7 @@ very fast.
                            :action '(("Open" . (lambda (candidate)
                                                  (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))
 
+
                          )))))
 
 
@@ -582,6 +577,11 @@ very fast.
 <https://emacs.stackexchange.com/a/57734>"
   (interactive)
   (helm-select-nth-action 1))
+
+(defun call-find-file-in-walking ()
+  ""
+  (interactive)
+  (helm-select-nth-action 0))
 
 (defun call-add-as-link ()
   ""
@@ -620,6 +620,7 @@ very fast.
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-map)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
+    (define-key map (kbd "C-<return>") 'call-find-file-in-walking)
     (define-key map (kbd "C-c i") 'call-add-as-link-in-walking)
     (define-key map (kbd "C-c M-i") 'call-add-as-transclusion-in-walking)
     (define-key map (kbd "C-c M-I") 'call-add-as-transclusion-only-head-in-walking)
