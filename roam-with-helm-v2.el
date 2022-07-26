@@ -229,7 +229,6 @@ file. Otherwise, just insert the content of the subtree."
                                   nil)))
 
                      ("Capture as a child" . (lambda (new-candidates)
-                                               ;; (message "wr %s" new-candidates)
                                                (org-roam-capture-
                                                 :templates '(("v" "Test before 1st head" entry
                                                               "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
@@ -240,7 +239,7 @@ file. Otherwise, just insert the content of the subtree."
 
                                        ))
 
-                     ("Insert link" . (lambda (canadidate)
+                     ("[C-c i  ] Insert link" . (lambda (canadidate)
                                       (let ((note-id (org-roam-node-from-id canadidate)))
                                         (if default
                                             (progn
@@ -256,7 +255,7 @@ file. Otherwise, just insert the content of the subtree."
                                             (org-roam-node-id note-id)
                                             (org-roam-node-title note-id)))))))
 
-                     ("Insert links with transclusions" . (lambda (x)
+                     ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                             (let ((note (helm-marked-candidates)))
                                                               (cl-loop for n in note
                                                                        do (--> n
@@ -267,7 +266,7 @@ file. Otherwise, just insert the content of the subtree."
                                                                                    (org-roam-node-id note-id)
                                                                                    (org-roam-node-title note-id)))))))))
 
-                     ("Insert as transclusion exclude headline" . (lambda (x)
+                     ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
                                                                     (let ((note (helm-marked-candidates)))
                                                                       (cl-loop for n in note
                                                                                do (--> n
@@ -400,7 +399,7 @@ very fast.
                                         (let ((x))
                                           (org-roam-property-add "ROAM_ALIASES" (read-from-minibuffer "What ALIAS?")))))))
 
-                   ("Insert link" . (lambda (canadidate)
+                   ("[C-c i  ] Insert link" . (lambda (canadidate)
                                       (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
                                         (if default
                                             (progn
@@ -416,7 +415,7 @@ very fast.
                                             (org-roam-node-id note-id)
                                             (org-roam-node-title note-id)))))))
 
-                   ("Insert links with transclusions" . (lambda (x)
+                   ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
                                                             (cl-loop for n in note
                                                                      do (--> n
@@ -427,7 +426,7 @@ very fast.
                                                                                  (org-roam-node-id note-id)
                                                                                  (org-roam-node-title note-id)))))))))
 
-                   ("Insert as transclusion exclude headline" . (lambda (x)
+                   ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
                                                             (cl-loop for n in note
                                                                      do (--> n
@@ -506,7 +505,7 @@ very fast.
                                                   (let ((x))
                                                     (org-roam-property-add "ROAM_ALIASES" (read-from-minibuffer "What ALIAS?")))))))
 
-                             ("Insert link" . (lambda (canadidate)
+                             ("[C-c i  ] Insert link" . (lambda (canadidate)
                                                 (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
                                                   (if default
                                                       (progn
@@ -522,7 +521,7 @@ very fast.
                                                       (org-roam-node-id note-id)
                                                       (org-roam-node-title note-id)))))))
 
-                             ("Insert links with transclusions" . (lambda (x)
+                             ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                                     (let ((note (helm-marked-candidates)))
                                                                       (cl-loop for n in note
                                                                                do (--> n
@@ -533,7 +532,7 @@ very fast.
                                                                                            (org-roam-node-id note-id)
                                                                                            (org-roam-node-title note-id)))))))))
 
-                             ("Insert as transclusion exclude headline" . (lambda (x)
+                             ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
                                                                             (let ((note (helm-marked-candidates)))
                                                                               (cl-loop for n in note
                                                                                        do (--> n
