@@ -223,10 +223,11 @@ file. Otherwise, just insert the content of the subtree."
                    :keymap helm-org-node-walk-map
                    :action
                    '(("Open" . (lambda (new-candidates)
-                                 (org-roam-node-visit
-                                  (org-roam-node-from-id
-                                   new-candidates)
-                                  nil)))
+                                 (or (org-roam-node-visit
+                                      (org-roam-node-from-id
+                                       new-candidates)
+                                      nil)
+                                     (org-id-goto new-candidates))))
 
                      ("Capture as a child" . (lambda (new-candidates)
                                                (org-roam-capture-
