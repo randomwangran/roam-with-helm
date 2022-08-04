@@ -287,8 +287,10 @@ file. Otherwise, just insert the content of the subtree."
   (if roam-visit-immediately
       (org-id-goto roam-visit-immediately))
 
-  (if node-does-not-have-any-head-flag
-      (org-id-goto my-id)))
+  (if (and node-does-not-have-any-head-flag
+           (eq (length roam-walk-stack) 1))
+      (org-id-goto my-id))
+  )
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
