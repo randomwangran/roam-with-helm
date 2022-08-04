@@ -4,7 +4,7 @@
 
 ;; Author: Ran Wang
 ;; URL: https://github.com/randomwangran/roam-with-helm
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Package-Requires: ((emacs "27.1") (org "9.4") (helm "3.6.2") (org-roam "2.2.1"))
 ;; Keywords: org-mode, navigation, writing, note-taking
 
@@ -185,99 +185,105 @@ Return the ID of the location."
             (remq nil (cdr (cl-loop collect (funcall pred)
                           until (let ((pos (point)))
                                   (null (org-forward-heading-same-level nil t))
-                                  (eq pos (point))))))
-            )))
+                                  (eq pos (point)))))))))
     (save-excursion
         (let ((pred (lambda () (if (org-id-get)
                                    (cons (org-entry-get nil "ITEM")
                                          (org-id-get))))))
           (progn
+            (org-back-to-heading t)
             (org-show-subtree)
-            (remq nil (cdr (cl-loop collect (funcall pred)
-                          until (let ((pos (point)))
-                                  (null (org-next-visible-heading 1))
-                                  (eq pos (point)))))))))))
+            (remq nil (if (org-goto-first-child)
+                  (cl-loop collect (funcall pred)
+                           until (let ((pos (point)))
+                                   (null (org-forward-heading-same-level nil t))
+                                   (eq pos (point)))))))))))
 
 (defun helm-org-roam-node-walk (my-id)
   "Process content of MY-ID. If it is a title, insert the whole
 file. Otherwise, just insert the content of the subtree."
   (interactive)
-  (if (= (org-roam-node-level (org-roam-node-from-id my-id)) 0)
-      (with-temp-buffer
-        (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
-        (org-mode)
-        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point)))
-    (with-temp-buffer
-        (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
-        (org-mode)
-        (re-search-forward (concat ":ID:       " my-id))
-        (org-narrow-to-subtree)
-        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))
+  (push my-id roam-walk-stack)
   ;; if a node does not have any child, then jump into the node;
   ;; otherwise, show the children.
-  (if (nth 0 (nth 0 my-new-candidates))
+  (if (nth 0 (nth 0 (if (= (org-roam-node-level (org-roam-node-from-id my-id)) 0)
+                        (with-temp-buffer
+                          (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
+                          (org-mode)
+                          (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point)))
+                      (with-temp-buffer
+                        (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
+                        (org-mode)
+                        (re-search-forward (concat ":ID:       " my-id))
+                        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))))
       (helm
-       :sources (list
-                 (helm-build-sync-source "We have some children?: "
-                   :candidates my-new-candidates
-                   :keymap helm-org-node-walk-map
-                   :action
-                   '(("Open" . (lambda (new-candidates)
-                                 (or (org-roam-node-visit
-                                      (org-roam-node-from-id
-                                       new-candidates)
-                                      nil)
-                                     (org-id-goto new-candidates))))
+              :sources (list
+                        (helm-build-sync-source "We have some children?: "
+                          :candidates my-new-candidates
+                          :keymap helm-org-node-walk-map
+                          :action
+                          '(("Open" . (lambda (new-candidates)
+                                        (or (helm-org-roam-node-walk new-candidates)
+                                            (org-id-goto new-candidates))))
 
-                     ("Capture as a child" . (lambda (new-candidates)
-                                               (org-roam-capture-
-                                                :templates '(("v" "Test before 1st head" entry
-                                                              "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
-                                                              :target (dynamic-node-2nd title-or-id)
-                                                              ))
-                                                :node (org-roam-node-from-id new-candidates)
-                                                :props '(:immediate-finish nil))
+                            ("Find File" . (lambda (canadidate)
+                                             (setq roam-visit-immediately canadidate)))
 
-                                       ))
+                            ("Capture as a child" . (lambda (new-candidates)
+                                                      (org-roam-capture-
+                                                       :templates '(("v" "Test before 1st head" entry
+                                                                     "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
+                                                                     :target (dynamic-node-2nd title-or-id)
+                                                                     ))
+                                                       :node (org-roam-node-from-id new-candidates)
+                                                       :props '(:immediate-finish nil))))
 
-                     ("[C-c i  ] Insert link" . (lambda (canadidate)
-                                      (let ((note-id (org-roam-node-from-id canadidate)))
-                                        (if default
-                                            (progn
-                                              (delete-region (region-beginning) (region-end))
-                                              (insert
-                                               (format
-                                                "[[id:%s][%s]]"
-                                                (org-roam-node-id note-id)
-                                                default)))
-                                          (insert
-                                           (format
-                                            "[[id:%s][%s]]"
-                                            (org-roam-node-id note-id)
-                                            (org-roam-node-title note-id)))))))
+                            ("[C-c i  ] Insert link" . (lambda (canadidate)
+                                                         (let ((note-id (org-roam-node-from-id canadidate)))
+                                                           (if default
+                                                               (progn
+                                                                 (delete-region (region-beginning) (region-end))
+                                                                 (insert
+                                                                  (format
+                                                                   "[[id:%s][%s]]"
+                                                                   (org-roam-node-id note-id)
+                                                                   default)))
+                                                             (insert
+                                                              (format
+                                                               "[[id:%s][%s]]"
+                                                               (org-roam-node-id note-id)
+                                                               (org-roam-node-title note-id)))))))
 
-                     ("[C-c M-i] Insert links with transclusions" . (lambda (x)
-                                                            (let ((note (helm-marked-candidates)))
-                                                              (cl-loop for n in note
-                                                                       do (--> n
-                                                                               (let ((note-id (org-roam-node-from-id n)))
-                                                                                 (insert
-                                                                                  (format
-                                                                                   "#+transclude: [[id:%s][%s]] :only-contents\n\n"
-                                                                                   (org-roam-node-id note-id)
-                                                                                   (org-roam-node-title note-id)))))))))
+                            ("[C-c M-i] Insert links with transclusions" . (lambda (x)
+                                                                             (let ((note (helm-marked-candidates)))
+                                                                               (cl-loop for n in note
+                                                                                        do (--> n
+                                                                                                (let ((note-id (org-roam-node-from-id n)))
+                                                                                                  (insert
+                                                                                                   (format
+                                                                                                    "#+transclude: [[id:%s][%s]] :only-contents\n\n"
+                                                                                                    (org-roam-node-id note-id)
+                                                                                                    (org-roam-node-title note-id)))))))))
 
-                     ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
-                                                                    (let ((note (helm-marked-candidates)))
-                                                                      (cl-loop for n in note
-                                                                               do (--> n
-                                                                                       (let ((note-id (org-roam-node-from-id n)))
-                                                                                         (insert
-                                                                                          (format
-                                                                                           "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
-                                                                                           (org-roam-node-id note-id)
-                                                                                           (org-roam-node-title note-id)))))))))))))
-    (org-roam-node-visit (org-roam-node-from-id my-id))))
+                            ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
+                                                                                     (let ((note (helm-marked-candidates)))
+                                                                                       (cl-loop for n in note
+                                                                                                do (--> n
+                                                                                                        (let ((note-id (org-roam-node-from-id n)))
+                                                                                                          (insert
+                                                                                                           (format
+                                                                                                            "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
+                                                                                                            (org-roam-node-id note-id)
+                                                                                                            (org-roam-node-title note-id)))))))))))))
+
+    (setq final-node-id (car roam-walk-stack)))
+
+  (if my-new-candidates
+      nil
+    (org-id-goto final-node-id))
+
+  (if roam-visit-immediately
+      (org-id-goto roam-visit-immediately)))
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
@@ -363,6 +369,8 @@ very fast.
   (let ((default (when (use-region-p)
                    (buffer-substring-no-properties
                     (region-beginning) (region-end)))))
+    (setq roam-walk-stack nil)
+    (setq roam-visit-immediately nil)
     (helm
      :input (or default ini)
      :sources (list
@@ -374,7 +382,7 @@ very fast.
                  :action
                  '(("Helm-org-roam-node-walk" . (lambda (canadidate)
                                                   (setq previous-node-title helm-pattern)
-                                              (helm-org-roam-node-walk (nth 0 canadidate))))
+                                                  (helm-org-roam-node-walk (nth 0 canadidate))))
 
                    ("Find File" . (lambda (canadidate)
                                     (org-roam-node-visit
@@ -463,8 +471,8 @@ very fast.
                                        (browse-url (concat "https://scholar.google.ca/scholar?hl=en&q=" candidate))))))))))
 
 
-;;;; poor man's recursion
-;;   TODO: Need superpower to make it elegent
+;;;; recursion
+;;
 (defun helm-org-node-walk--test ()
   "It returns back to the intial query."
   (interactive)
@@ -571,6 +579,87 @@ very fast.
 
                          )))))
 
+(defun helm-org-node-walk--new ()
+  "Function to process <Walk back to previous node.>"
+  (interactive)
+  (helm-run-after-exit
+   (lambda ()
+     (pop roam-walk-stack)
+     (if (nth 0 (nth 0 (if (= (org-roam-node-level (org-roam-node-from-id (car roam-walk-stack))) 0)
+                        (with-temp-buffer
+                          (insert-file-contents (org-roam-node-file (org-roam-node-from-id (car roam-walk-stack))))
+                          (org-mode)
+                          (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point)))
+                      (with-temp-buffer
+                        (insert-file-contents (org-roam-node-file (org-roam-node-from-id (car roam-walk-stack))))
+                        (org-mode)
+                        (re-search-forward (concat ":ID:       " (car roam-walk-stack)))
+                        ;;  (org-narrow-to-subtree)
+                        (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))))
+         (helm
+              :sources (list
+                        (helm-build-sync-source "We have some children?: "
+                          :candidates my-new-candidates
+                          :keymap helm-org-node-walk-map
+                          :action
+                          '(("Open" . (lambda (new-candidates)
+                                        (or (helm-org-roam-node-walk new-candidates)
+                                            (org-id-goto new-candidates))))
+
+                            ("Find File" . (lambda (canadidate)
+                                             (setq roam-visit-immediately canadidate)))
+
+                            ("Capture as a child" . (lambda (new-candidates)
+                                                      (org-roam-capture-
+                                                       :templates '(("v" "Test before 1st head" entry
+                                                                     "* %?\n:PROPERTIES:\n:ID: %(org-id-uuid)\n:END:\n"
+                                                                     :target (dynamic-node-2nd title-or-id)
+                                                                     ))
+                                                       :node (org-roam-node-from-id new-candidates)
+                                                       :props '(:immediate-finish nil))
+
+                                                      ))
+
+                            ("[C-c i  ] Insert link" . (lambda (canadidate)
+                                                         (let ((note-id (org-roam-node-from-id canadidate)))
+                                                           (if default
+                                                               (progn
+                                                                 (delete-region (region-beginning) (region-end))
+                                                                 (insert
+                                                                  (format
+                                                                   "[[id:%s][%s]]"
+                                                                   (org-roam-node-id note-id)
+                                                                   default)))
+                                                             (insert
+                                                              (format
+                                                               "[[id:%s][%s]]"
+                                                               (org-roam-node-id note-id)
+                                                               (org-roam-node-title note-id)))))))
+
+                            ("[C-c M-i] Insert links with transclusions" . (lambda (x)
+                                                                             (let ((note (helm-marked-candidates)))
+                                                                               (cl-loop for n in note
+                                                                                        do (--> n
+                                                                                                (let ((note-id (org-roam-node-from-id n)))
+                                                                                                  (insert
+                                                                                                   (format
+                                                                                                    "#+transclude: [[id:%s][%s]] :only-contents\n\n"
+                                                                                                    (org-roam-node-id note-id)
+                                                                                                    (org-roam-node-title note-id)))))))))
+
+                            ("[C-c M-I] Insert as transclusion exclude headline" . (lambda (x)
+                                                                                     (let ((note (helm-marked-candidates)))
+                                                                                       (cl-loop for n in note
+                                                                                                do (--> n
+                                                                                                        (let ((note-id (org-roam-node-from-id n)))
+                                                                                                          (insert
+                                                                                                           (format
+                                                                                                            "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
+                                                                                                            (org-roam-node-id note-id)
+                                                                                                            (org-roam-node-title note-id)))))))))))))
+    (org-roam-node-visit (or (org-roam-node-from-id my-new-candidates)
+                             (org-id-goto my-new-candidates)))))))
+
 
 (defun call-find-file ()
   "Thanks to xuchunyang:
@@ -581,7 +670,7 @@ very fast.
 (defun call-find-file-in-walking ()
   ""
   (interactive)
-  (helm-select-nth-action 0))
+  (helm-select-nth-action 1))
 
 (defun call-add-as-link ()
   ""
@@ -619,7 +708,7 @@ very fast.
 (setq helm-org-node-walk-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-map)
-    (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
+    (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--new)
     (define-key map (kbd "C-<return>") 'call-find-file-in-walking)
     (define-key map (kbd "C-c i") 'call-add-as-link-in-walking)
     (define-key map (kbd "C-c M-i") 'call-add-as-transclusion-in-walking)
