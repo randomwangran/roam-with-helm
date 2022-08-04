@@ -207,10 +207,12 @@ file. Otherwise, just insert the content of the subtree."
   ;; if a node does not have any child, then jump into the node;
   ;; otherwise, show the children.
   (if (nth 0 (nth 0 (if (= (org-roam-node-level (org-roam-node-from-id my-id)) 0)
-                        (with-temp-buffer
-                          (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
-                          (org-mode)
-                          (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point)))
+                        (progn
+                          (setq node-does-not-have-any-head-flag t)
+                          (with-temp-buffer
+                            (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
+                            (org-mode)
+                            (setq my-new-candidates (helm-org-roam-node-walk--subheadings-at-point))))
                       (with-temp-buffer
                         (insert-file-contents (org-roam-node-file (org-roam-node-from-id my-id)))
                         (org-mode)
@@ -283,7 +285,10 @@ file. Otherwise, just insert the content of the subtree."
     (org-id-goto final-node-id))
 
   (if roam-visit-immediately
-      (org-id-goto roam-visit-immediately)))
+      (org-id-goto roam-visit-immediately))
+
+  (if node-does-not-have-any-head-flag
+      (org-id-goto my-id)))
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
@@ -371,6 +376,7 @@ very fast.
                     (region-beginning) (region-end)))))
     (setq roam-walk-stack nil)
     (setq roam-visit-immediately nil)
+    (setq node-does-not-have-any-head-flag nil)
     (helm
      :input (or default ini)
      :sources (list
