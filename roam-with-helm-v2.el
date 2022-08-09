@@ -289,8 +289,7 @@ file. Otherwise, just insert the content of the subtree."
 
   (if (and node-does-not-have-any-head-flag
            (eq (length roam-walk-stack) 1))
-      (org-id-goto my-id))
-  )
+      (org-id-goto my-id)))
 
 (defun fast/org-roam-node-random ()
   "Jump into a random node but very fast."
@@ -432,6 +431,14 @@ very fast.
                                             (org-roam-node-id note-id)
                                             (org-roam-node-title note-id)))))))
 
+                   ("[NaN   ] Insert link using ALIAS" . (lambda (canadidate)
+                                                           (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                                             (insert
+                                                                (format
+                                                                 "[[id:%s][%s]]"
+                                                                 (org-roam-node-id note-id)
+                                                                 (nth 1 canadidate))))))
+
                    ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
                                                             (cl-loop for n in note
@@ -459,7 +466,6 @@ very fast.
                                         (save-excursion (helm-org-walk
                                          (org-roam-node-file (org-roam-node-from-id
                                       (nth 0 canadidate)))))))))
-
 
                (helm-build-dummy-source
                    "Create note"
@@ -566,7 +572,6 @@ very fast.
                                                                    (org-roam-node-file (org-roam-node-from-id
                                                                                         (nth 0 canadidate)))))))))
 
-
                          (helm-build-dummy-source
                              "Create note"
                            :action '(("Capture note" . (lambda (candidate)
@@ -672,7 +677,6 @@ very fast.
                                         (save-excursion (helm-org-walk
                                          (org-roam-node-file (org-roam-node-from-id
                                       (nth 0 canadidate)))))))))
-
 
                (helm-build-dummy-source
                    "Create note"
