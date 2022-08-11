@@ -346,6 +346,26 @@ GROUP BY id
                                   (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
                       cand)))
 
+
+;;;; tools
+(defun my-org-day-of-week ()
+  (org-day-of-week (nth 3 (decode-time))
+                   (nth 4 (decode-time))
+                   (nth 5 (decode-time))))
+
+(defun wr/jump-into-workout-log (org-id)
+  (interactive)
+  (org-id-goto org-id)
+  (org-narrow-to-subtree)
+  (org-columns)
+  (org-overview)
+  (show-children)
+  (move-beginning-of-line-or-indentation)
+  (re-search-forward (concat "-D" (number-to-string (my-org-day-of-week))) nil t)
+  (move-beginning-of-line-or-indentation)
+  (org-show-entry))
+
+;;;; main functions
 (defun helm-org-roam (&optional default ini candidates)
   "Original see from a blog post by Andrea:
 <https://ag91.github.io/blog/2022/02/05/an-helm-source-for-org-roam-v2/>
@@ -438,6 +458,14 @@ very fast.
                                                                  "[[id:%s][%s]]"
                                                                  (org-roam-node-id note-id)
                                                                  (nth 1 canadidate))))))
+
+                   ("[No KBD  ] Insert workout link" . (lambda (canadidate)
+                                      (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                        (insert
+                                           (format
+                                            "[[elisp:(wr/jump-into-workout-log \"%s\")][Training daily: %s]]"
+                                            (org-roam-node-id note-id)
+                                            (org-roam-node-title note-id))))))
 
                    ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
