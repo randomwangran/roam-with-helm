@@ -49,6 +49,9 @@
 
 (setq previous-node-title nil)
 
+(defun chatgpt/add-slash-to-string (str)
+  (concat (substring str 0 2) "/" (substring str 2)))
+
 ;;;; [Very Very Very important]
 ;; Walk around for dynamically capture a thoughts into a node.
 ;; Notice `(dynamic-node ,title-or-id), only works for Helm user.
@@ -204,6 +207,7 @@ Return the ID of the location."
 file. Otherwise, just insert the content of the subtree."
   (interactive)
   (push my-id roam-walk-stack)
+  (message "debug flag %s" my-id)
   ;; if a node does not have any child, then jump into the node;
   ;; otherwise, show the children.
   (if (nth 0 (nth 0 (if (= (org-roam-node-level (org-roam-node-from-id my-id)) 0)
@@ -225,8 +229,13 @@ file. Otherwise, just insert the content of the subtree."
                           :keymap helm-org-node-walk-map
                           :action
                           '(("Open" . (lambda (new-candidates)
-                                        (or (helm-org-roam-node-walk new-candidates)
-                                            (org-id-goto new-candidates))))
+                                        (message "does it call debug flag %s" new-candidates)
+                                        (or (progn
+                                              (org-id-goto new-candidates)
+                                              (widen)
+                                              (org-id-goto new-candidates))
+                                            (helm-org-roam-node-walk new-candidates)
+                                            )))
 
                             ("Find File" . (lambda (canadidate)
                                              (setq roam-visit-immediately canadidate)))
@@ -240,8 +249,8 @@ file. Otherwise, just insert the content of the subtree."
                                                        :node (org-roam-node-from-id new-candidates)
                                                        :props '(:immediate-finish nil))))
 
-                            ("[C-c i  ] Insert link" . (lambda (canadidate)
-                                                         (let ((note-id (org-roam-node-from-id canadidate)))
+                            ("[C-c i  ] Insert link" . (lambda (new-candidates)
+                                                         (let ((note-id (org-roam-node-from-id new-candidates)))
                                                            (if default
                                                                (progn
                                                                  (delete-region (region-beginning) (region-end))
@@ -451,21 +460,6 @@ very fast.
                                             (org-roam-node-id note-id)
                                             (org-roam-node-title note-id)))))))
 
-                   ("[NaN   ] Insert link using ALIAS" . (lambda (canadidate)
-                                                           (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
-                                                             (insert
-                                                                (format
-                                                                 "[[id:%s][%s]]"
-                                                                 (org-roam-node-id note-id)
-                                                                 (nth 1 canadidate))))))
-
-                   ("[No KBD  ] Insert workout link" . (lambda (canadidate)
-                                      (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
-                                        (insert
-                                           (format
-                                            "[[elisp:(wr/jump-into-workout-log \"%s\")][Training daily: %s]]"
-                                            (org-roam-node-id note-id)
-                                            (org-roam-node-title note-id))))))
 
                    ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                           (let ((note (helm-marked-candidates)))
@@ -488,6 +482,32 @@ very fast.
                                                                                  "#+transclude: [[id:%s][%s]] :only-contents :exclude-elements \"headline\"\n\n"
                                                                                  (org-roam-node-id note-id)
                                                                                  (org-roam-node-title note-id)))))))))
+
+                   ("[C-c C-o ] Open attachment" . (lambda (canadidate)
+                                      (let* ((note-id (org-roam-node-from-id (nth 0 canadidate)))
+                                            (attach-dir (expand-file-name
+                                                         (chatgpt/add-slash-to-string (org-roam-node-id note-id))
+                                                         org-attach-directory)))
+                                        (if (file-exists-p attach-dir)
+                                            (dired attach-dir)
+                                          (message "Attachment directory not found.")))))
+
+                   ("[NaN   ] Insert link using ALIAS" . (lambda (canadidate)
+                                                           (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                                             (insert
+                                                                (format
+                                                                 "[[id:%s][%s]]"
+                                                                 (org-roam-node-id note-id)
+                                                                 (nth 1 canadidate))))))
+
+                   ("[No KBD  ] Insert workout link" . (lambda (canadidate)
+                                      (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                        (insert
+                                           (format
+                                            "[[elisp:(wr/jump-into-workout-log \"%s\")][Training daily: %s]]"
+                                            (org-roam-node-id note-id)
+                                            (org-roam-node-title note-id))))))
+
 
                    ;; Thank Dustin Lacewell for inspiration.
                    ("Helm-org-walk" . (lambda (canadidate)
@@ -557,20 +577,20 @@ very fast.
                                                     (org-roam-property-add "ROAM_ALIASES" (read-from-minibuffer "What ALIAS?")))))))
 
                              ("[C-c i  ] Insert link" . (lambda (canadidate)
-                                                (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
-                                                  (if default
-                                                      (progn
-                                                        (delete-region (region-beginning) (region-end))
-                                                        (insert
-                                                         (format
-                                                          "[[id:%s][%s]]"
-                                                          (org-roam-node-id note-id)
-                                                          default)))
-                                                    (insert
-                                                     (format
-                                                      "[[id:%s][%s]]"
-                                                      (org-roam-node-id note-id)
-                                                      (org-roam-node-title note-id)))))))
+                                                          (let ((note-id (org-roam-node-from-id (nth 0 canadidate))))
+                                                            (if default
+                                                                (progn
+                                                                  (delete-region (region-beginning) (region-end))
+                                                                  (insert
+                                                                   (format
+                                                                    "[[id:%s][%s]]"
+                                                                    (org-roam-node-id note-id)
+                                                                    default)))
+                                                              (insert
+                                                               (format
+                                                                "[[id:%s][%s]]"
+                                                                (org-roam-node-id note-id)
+                                                                (org-roam-node-title note-id)))))))
 
                              ("[C-c M-i] Insert links with transclusions" . (lambda (x)
                                                                     (let ((note (helm-marked-candidates)))
@@ -750,6 +770,10 @@ very fast.
   (interactive)
   (helm-select-nth-action 6))
 
+(defun call-open-attachment ()
+  ""
+  (interactive)
+  (helm-select-nth-action 7))
 
 (defun call-add-as-link-in-walking ()
   ""
@@ -784,8 +808,10 @@ very fast.
     (define-key map (kbd "C-<return>") 'call-find-file)
     (define-key map (kbd "C-<backspace>") 'helm-org-node-walk--test)
     (define-key map (kbd "C-c i") 'call-add-as-link)
+    (define-key map (kbd "C-c o") 'call-add-as-link)
     (define-key map (kbd "C-c M-i") 'call-add-as-transclusion)
     (define-key map (kbd "C-c M-I") 'call-add-as-transclusion-only-head)
+    (define-key map (kbd "C-c C-o") 'call-open-attachment)
     (define-key map (kbd "<RET>") 'helm-maybe-exit-minibuffer)
     map))
 
