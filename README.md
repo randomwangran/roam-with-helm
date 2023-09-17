@@ -5,21 +5,28 @@
 
 Clone or download this repository (path of the folder is the <roam-with-helm> used below).
 
-In your ~/.emacs, add the following two lines:
+If using Org Roam v2, clone (or download) the [helm-org-walk](https://github.com/dustinlacewell/helm-org-walk) repository.
+
+In your `~/.emacs`, add the following two lines:
 
     (add-to-list 'load-path "<roam-with-helm>")
     (require 'roam-with-helm)
 
+Or for version 2:
+
+    (add-to-list 'load-path "<roam-with-helm>")
+    (add-to-list 'load-path "<helm-org-walk>")
+    (require 'roam-with-helm-v2)
 
 # Usage
 
 By press: \`M-x roam-with-helm-org-roam-find-file\`
 
     (define-key org-mode-map (kbd "C-c f") 'roam-with-helm-org-roam-find-file)
-    
+
 Or for version-2
-    
-    (define-key global-mode-map (kbd "C-c f") 'helm-org-roam)
+
+    (global-set-key (kbd "C-c f") 'helm-org-roam)
 
 ## Jump to the content
 
