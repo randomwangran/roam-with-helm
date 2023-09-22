@@ -310,10 +310,11 @@ file. Otherwise, just insert the content of the subtree."
 (defun node-candidates ()
   "Returns candidates for the org-roam nodes."
   (cl-loop for cand in (org-roam-db-query
-                 "SELECT
+                        "SELECT id, title, tags FROM
+(SELECT
     id,
-    aliases as aliases,
-    Null as Col2
+    aliases as title,
+    Null as tags
   FROM
     (
     SELECT
@@ -321,9 +322,10 @@ file. Otherwise, just insert the content of the subtree."
       aliases.alias as aliases
     FROM nodes
     LEFT JOIN aliases ON aliases.node_id = nodes.id
+    WHERE aliases.alias IS NOT NULL
     GROUP BY nodes.id, aliases.alias
 )
-UNION ALL
+UNION
 SELECT
   id,
   title,
@@ -345,15 +347,15 @@ FROM
     LEFT JOIN aliases ON aliases.node_id = nodes.id
     GROUP BY nodes.id, tags.tag )
   GROUP BY id, tags )
-GROUP BY id
-")
-        collect (cons (if (nth 2 cand)
-                            (format "%s   #%s"
-                                    (truncate-string-to-width (nth 1 cand) 80 nil ?\s "…")
-                                    (mapconcat 'identity (nth 2 cand) " #"))
-                          (format "%s"
-                                  (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
-                      cand)))
+GROUP BY id)
+ORDER BY title")
+           collect (cons (if (nth 2 cand)
+                             (format "%s   #%s"
+                                     (truncate-string-to-width (nth 1 cand) 80 nil ?\s "…")
+                                     (mapconcat 'identity (nth 2 cand) " #"))
+                           (format "%s"
+                                   (truncate-string-to-width (or (nth 1 cand) "") 80 nil ?\s "…")))
+                         cand)))
 
 
 ;;;; tools
